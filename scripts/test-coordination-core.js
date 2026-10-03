@@ -29,6 +29,10 @@ withTempProject((projectRoot) => {
 
   assert.equal(scopesOverlap(['src/app'], ['src']), true, 'parent-child scopes should overlap');
   assert.equal(scopesOverlap(['src(read-only)'], ['src']), false, 'read-only scope should not block');
+  assert.equal(scopesOverlap(['src'], ['srcs']), false, 'shared string prefix alone is not an overlap');
+  assert.equal(scopesOverlap(['src/app'], ['srcs/app']), false, 'sibling directories with a shared prefix do not overlap');
+  assert.equal(scopesOverlap(['src/'], ['src']), true, 'trailing slashes still resolve to the same directory');
+  assert.equal(scopesOverlap([''], ['src']), false, 'an empty scope entry blocks nothing');
 
   const instance = registerInstance('agent-a', { projectRoot, now: freshStart, pid: process.pid });
   assert.equal(instance.instanceId, 'agent-a');
