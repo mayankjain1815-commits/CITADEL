@@ -10,7 +10,11 @@ const {
 } = require('./io');
 
 function normalizeScopeEntry(entry) {
-  return String(entry || '').replace(/\(read-only\)$/u, '').trim();
+  return String(entry || '')
+    .replace(/\(read-only\)$/u, '')
+    .trim()
+    .replace(/\\/g, '/')
+    .replace(/\/+$/, '');
 }
 
 function isReadOnlyScope(entry) {
@@ -25,7 +29,10 @@ function scopesOverlap(scopeA, scopeB) {
     for (const right of scopeB) {
       if (isReadOnlyScope(right)) continue;
       const cleanRight = normalizeScopeEntry(right);
-      if (cleanLeft.startsWith(cleanRight) || cleanRight.startsWith(cleanLeft)) {
+      if (cleanLeft && cleanRight
+          && (cleanLeft === cleanRight
+            || cleanLeft.startsWith(cleanRight + '/')
+            || cleanRight.startsWith(cleanLeft + '/'))) {
         return true;
       }
     }
