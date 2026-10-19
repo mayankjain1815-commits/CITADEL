@@ -13,6 +13,9 @@ permissions:
 jobs:
   scan:
     runs-on: ubuntu-latest
+    # Dependabot-triggered runs receive a read-only GITHUB_TOKEN and no repository
+    # secrets, so the scanner cannot authenticate and always fails there. Skip them.
+    if: github.actor != 'dependabot[bot]'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: HOL Plugin Scanner
