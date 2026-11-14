@@ -7,7 +7,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const { getCoordinationPaths, readJson, STALE_INSTANCE_MS } = require('../core/coordination/io');
+const { getCoordinationPaths, isProcessAlive, readJson, STALE_INSTANCE_MS } = require('../core/coordination/io');
 const { registerInstance, heartbeatInstance, unregisterInstance, getCoordinationStatus } = require('../core/coordination/instances');
 const { claimScope, findOverlap, getClaimStatus, releaseClaim, scopesOverlap } = require('../core/coordination/claims');
 const { sweepStaleInstances } = require('../core/coordination/sweep');
@@ -84,6 +84,29 @@ withTempProject((projectRoot) => {
   };
   assert.equal(finalStatus.instances.length, 0, 'all instances should be removed by the end');
   assert.equal(finalStatus.claims.length, 0, 'all claims should be removed by the end');
+});
+
+withTempProject((projectRoot) => {
+  const now = new Date().toISOString();
+  registerInstance('agent-eprem', { projectRoot, now, pid: 4242 });
+  claimScope('agent-eprem', ['src/core'], 'build', 'Live cross-user instance', { projectRoot, now });
+
+  const originalKill = process.kill;
+  process.kill = () => {
+    const error = new Error('operation not permitted');
+    error.code = 'EPERM';
+    throw error;
+  };
+
+  try {
+    assert.equal(isProcessAlive(4242), true, 'EPERM should count as a live process');
+    const sweep = sweepStaleInstances({ projectRoot, nowMs: Date.now() });
+    assert.equal(sweep.cleaned, 0, 'a live process that denies signals must not be swept');
+    assert.equal(getCoordinationStatus({ projectRoot }).instances.length, 1, 'live instance should remain registered');
+    assert.equal(getClaimStatus({ projectRoot }).claims.length, 1, 'live instance claim should remain');
+  } finally {
+    process.kill = originalKill;
+  }
 });
 
 console.log('coordination core tests passed');
