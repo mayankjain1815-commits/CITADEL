@@ -59,8 +59,10 @@ function isProcessAlive(pid) {
   try {
     process.kill(pid, 0);
     return true;
-  } catch {
-    return false;
+  } catch (error) {
+    // EPERM means the process exists but belongs to another user. Treating it
+    // as dead would let a sweep delete a live instance's claim.
+    return error.code === 'EPERM';
   }
 }
 
